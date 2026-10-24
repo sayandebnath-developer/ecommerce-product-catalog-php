@@ -29,7 +29,7 @@ $cat_result = mysqli_query($conn, 'SELECT category_id, category_name FROM catego
 
         <form class="search-form" action="<?php echo $base; ?>products.php" method="get">
             <input type="text" name="q" placeholder="Search products..."
-                   value="<?php echo isset($_GET['q']) ? htmlspecialchars($_GET['q']) : ''; ?>">
+                   value="<?php echo (isset($_GET['q']) && is_string($_GET['q'])) ? htmlspecialchars($_GET['q']) : ''; ?>">
             <button type="submit">Search</button>
         </form>
     </div>

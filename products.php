@@ -26,23 +26,47 @@ if (isset($_GET['category'])) {
     }
 }
 
-// 2. Get the products
-if ($error === '') {
-    if ($category) {
-        $stmt = mysqli_prepare($conn,
-            'SELECT p.*, c.category_name
-             FROM products p JOIN categories c ON p.category_id = c.category_id
-             WHERE p.category_id = ?
-             ORDER BY p.product_name');
-        mysqli_stmt_bind_param($stmt, 'i', $cid);
-        mysqli_stmt_execute($stmt);
-        $products = mysqli_stmt_get_result($stmt);
-    } else {
-        $products = mysqli_query($conn,
-            'SELECT p.*, c.category_name
-             FROM products p JOIN categories c ON p.category_id = c.category_id
-             ORDER BY p.product_name');
+// 2. Read the search keyword (FR-03)
+$q = '';
+if (isset($_GET['q']) && is_string($_GET['q'])) {
+    $q = trim($_GET['q']);
+    if (mb_strlen($q) > 100) {
+        $q = mb_substr($q, 0, 100);   // keep the keyword to a sensible length
     }
+}
+
+// 3. Get the products (category filter and search keyword can be used together)
+if ($error === '') {
+    $where  = [];   // conditions
+    $types  = '';   // parameter types for bind_param
+    $params = [];   // parameter values
+
+    if ($category) {
+        $where[]  = 'p.category_id = ?';
+        $types   .= 'i';
+        $params[] = $cid;
+    }
+    if ($q !== '') {
+        $where[]  = '(p.product_name LIKE ? OR p.description LIKE ?)';
+        $like     = '%' . addcslashes($q, '%_\\') . '%';   // % and _ typed by the user are searched as normal characters
+        $types   .= 'ss';
+        $params[] = $like;
+        $params[] = $like;
+    }
+
+    $sql = 'SELECT p.*, c.category_name
+            FROM products p JOIN categories c ON p.category_id = c.category_id';
+    if ($where) {
+        $sql .= ' WHERE ' . implode(' AND ', $where);
+    }
+    $sql .= ' ORDER BY p.product_name';
+
+    $stmt = mysqli_prepare($conn, $sql);
+    if ($params) {
+        mysqli_stmt_bind_param($stmt, $types, ...$params);
+    }
+    mysqli_stmt_execute($stmt);
+    $products = mysqli_stmt_get_result($stmt);
 }
 
 $heading    = $category ? $category['category_name'] : 'All Products';
