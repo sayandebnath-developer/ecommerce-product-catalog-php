@@ -16,22 +16,51 @@ while ($row = mysqli_fetch_assoc($result)) {
 
 // Form submitted: validate, then save
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    list($data, $errors) = validate_product($conn, $_POST);
 
+    // If the whole request was bigger than post_max_size, PHP empties $_POST and $_FILES
+    if (empty($_POST) && empty($_FILES) && (int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 0) {
+        $errors[] = 'The upload is too large. Please choose an image smaller than 2 MB.';
+    } else {
+        list($data, $errors) = validate_product($conn, $_POST);
+
+        // Image check (the image is optional)
+        list($image_ext, $image_error) = check_image_upload($_FILES['image'] ?? null);
+        if ($image_error !== '') {
+            $errors[] = $image_error;
+        }
+    }
+
+    // Everything is valid: save the image file first
+    $image_file = NO_IMAGE;
+    if (!$errors && $image_ext !== null) {
+        $saved = save_product_image($_FILES['image']['tmp_name'], $image_ext);
+        if ($saved === null) {
+            $errors[] = 'The image could not be saved on the server.';
+        } else {
+            $image_file = $saved;
+        }
+    }
+
+    // Then save the product
     if (!$errors) {
         $category_id = (int)$data['category_id'];
         $price       = number_format((float)$data['price'], 2, '.', '');
         $stock       = (int)$data['stock'];
 
-        $stmt = mysqli_prepare($conn,
-            'INSERT INTO products (category_id, product_name, description, price, stock_quantity, is_featured)
-             VALUES (?, ?, ?, ?, ?, ?)');
-        mysqli_stmt_bind_param($stmt, 'isssii',
-            $category_id, $data['name'], $data['description'], $price, $stock, $data['featured']);
-        mysqli_stmt_execute($stmt);
+        try {
+            $stmt = mysqli_prepare($conn,
+                'INSERT INTO products (category_id, product_name, description, price, image, stock_quantity, is_featured)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)');
+            mysqli_stmt_bind_param($stmt, 'issssii',
+                $category_id, $data['name'], $data['description'], $price, $image_file, $stock, $data['featured']);
+            mysqli_stmt_execute($stmt);
 
-        header('Location: products.php?added=1');
-        exit;
+            header('Location: products.php?added=1');
+            exit;
+        } catch (mysqli_sql_exception $e) {
+            delete_product_image($image_file);   // do not leave an unused file behind
+            $errors[] = 'The product could not be saved. Please try again.';
+        }
     }
 }
 
@@ -60,7 +89,7 @@ require __DIR__ . '/menu.php';
         </div>
     <?php } ?>
 
-    <form class="form-box" method="post" action="product_add.php">
+    <form class="form-box" method="post" action="product_add.php" enctype="multipart/form-data">
         <label for="product_name">Product name *</label>
         <input type="text" id="product_name" name="product_name" maxlength="150"
                value="<?php echo htmlspecialchars($data['name']); ?>">
@@ -85,6 +114,10 @@ require __DIR__ . '/menu.php';
         <label for="stock_quantity">Stock quantity *</label>
         <input type="number" id="stock_quantity" name="stock_quantity" step="1" min="0"
                value="<?php echo htmlspecialchars($data['stock']); ?>">
+
+        <label for="image">Product image (optional)</label>
+        <input type="file" id="image" name="image" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+        <small class="subtitle">JPG, PNG or WEBP, maximum 2 MB. If the form shows an error, choose the image again (browsers do not keep file selections).</small>
 
         <label class="check-label">
             <input type="checkbox" name="is_featured" value="1"<?php echo $data['featured'] ? ' checked' : ''; ?>>

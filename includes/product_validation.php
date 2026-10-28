@@ -66,3 +66,84 @@ function validate_product($conn, $input) {
 
     return [$data, $errors];
 }
+
+// ---------------------------------------------------------------------
+// Image upload helpers (FR-10) - used by product_add.php and product_edit.php
+// ---------------------------------------------------------------------
+const IMAGE_MAX_BYTES = 2 * 1024 * 1024;   // 2 MB
+const IMAGE_TYPES     = [                  // allowed MIME type => file extension
+    'image/jpeg' => 'jpg',
+    'image/png'  => 'png',
+    'image/webp' => 'webp'
+];
+const NO_IMAGE = 'no-image.png';           // same default as the database column
+
+// Checks the uploaded image. The image is optional.
+// Returns [file extension or null, error message or '']
+function check_image_upload($file) {
+    // No file chosen (or the field is missing): nothing to check
+    if (!is_array($file) || !isset($file['error']) || !is_int($file['error'])
+        || $file['error'] === UPLOAD_ERR_NO_FILE) {
+        return [null, ''];
+    }
+
+    // Upload errors reported by PHP (file bigger than the limit in php.ini, partial upload, ...)
+    if ($file['error'] === UPLOAD_ERR_INI_SIZE || $file['error'] === UPLOAD_ERR_FORM_SIZE) {
+        return [null, 'The image is too large. The maximum size is 2 MB.'];
+    }
+    if ($file['error'] !== UPLOAD_ERR_OK) {
+        return [null, 'The image could not be uploaded. Please try again.'];
+    }
+
+    // The file must really come from an HTTP upload
+    if (!is_uploaded_file($file['tmp_name'])) {
+        return [null, 'Invalid image upload.'];
+    }
+
+    // Our own size limit
+    if ($file['size'] > IMAGE_MAX_BYTES) {
+        return [null, 'The image is too large. The maximum size is 2 MB.'];
+    }
+
+    // MIME type read from the file CONTENT (the type sent by the browser can be faked)
+    $finfo = new finfo(FILEINFO_MIME_TYPE);
+    $mime  = $finfo->file($file['tmp_name']);
+    if (!isset(IMAGE_TYPES[$mime])) {
+        return [null, 'Only JPG, PNG or WEBP images are allowed.'];
+    }
+
+    // Second check: the file must be a readable image
+    if (@getimagesize($file['tmp_name']) === false) {
+        return [null, 'The selected file is not a valid image.'];
+    }
+
+    return [IMAGE_TYPES[$mime], ''];
+}
+
+// Moves the checked upload into assets/images/products with a unique name.
+// Returns the new file name, or null if saving failed.
+function save_product_image($tmp_name, $ext) {
+    $dir = __DIR__ . '/../assets/images/products/';
+    if (!is_dir($dir) && !mkdir($dir, 0755, true)) {
+        return null;
+    }
+
+    $name = 'product_' . date('YmdHis') . '_' . bin2hex(random_bytes(6)) . '.' . $ext;
+
+    if (!move_uploaded_file($tmp_name, $dir . $name)) {
+        return null;
+    }
+    return $name;
+}
+
+// Deletes a product image file (used when a save fails; also needed by delete and edit)
+function delete_product_image($file) {
+    $name = basename((string)$file);
+    if ($name === '' || $name === NO_IMAGE) {
+        return;   // never delete the default image
+    }
+    $path = __DIR__ . '/../assets/images/products/' . $name;
+    if (is_file($path)) {
+        unlink($path);
+    }
+}
