@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 01, 2026 at 03:52 PM
+-- Generation Time: Nov 05, 2026 at 07:33 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -28,7 +28,7 @@ USE `ecommerce_catalog`;
 --
 -- Table structure for table `admin_users`
 --
-
+SET FOREIGN_KEY_CHECKS=0;
 DROP TABLE IF EXISTS `admin_users`;
 CREATE TABLE `admin_users` (
   `admin_id` int(11) NOT NULL,
@@ -42,7 +42,7 @@ CREATE TABLE `admin_users` (
 --
 
 INSERT INTO `admin_users` (`admin_id`, `username`, `password_hash`, `created_at`) VALUES
-(1, 'phpproject', '$2y$10$ekBNGcg1SpgVHpSCNl2YbOswFoD/AUHk.sQw5Z5R45xf3AYnJCXai', '2026-10-23 15:18:15');
+(1, 'control_hub', '$2y$10$ekBNGcg1SpgVHpSCNl2YbOswFoD/AUHk.sQw5Z5R45xf3AYnJCXai', '2026-10-23 15:18:15');
 
 -- --------------------------------------------------------
 
@@ -144,13 +144,13 @@ ALTER TABLE `admin_users`
 -- AUTO_INCREMENT for table `categories`
 --
 ALTER TABLE `categories`
-  MODIFY `category_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `category_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `products`
 --
 ALTER TABLE `products`
-  MODIFY `product_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+  MODIFY `product_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- Constraints for dumped tables
@@ -166,3 +166,4 @@ COMMIT;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+SET FOREIGN_KEY_CHECKS=1;
