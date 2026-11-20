@@ -21,7 +21,7 @@ $featured = mysqli_query($conn,
 ?>
 
 <h1>Welcome to our Product Catalog</h1>
-<p class="subtitle">Browse products by category, search for what you need, or pick from our featured products.</p>
+<p class="subtitle"><b>Browse products by category, search for what you need, or pick from our featured products.</b></p>
 
 <h2>Shop by Category</h2>
 <div class="category-grid">
